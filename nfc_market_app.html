@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛒 재미있는 시장놀이</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .nfc-status {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .nfc-status.error {
+            background: #f44336;
+        }
+
+        .shopping-cart {
+            padding: 30px 20px;
+        }
+
+        .cart-title {
+            font-size: 2em;
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .cart-items {
+            background: #f8f9ff;
+            border-radius: 20px;
+            padding: 20px;
+            min-height: 200px;
+            border: 3px dashed #ddd;
+        }
+
+        .cart-item {
+            background: white;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            font-size: 1.3em;
+            color: #333;
+            border-left: 5px solid #667eea;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .empty-cart {
+            text-align: center;
+            color: #999;
+            font-size: 1.5em;
+            padding: 40px;
+        }
+
+        .payment-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            font-size: 2em;
+            color: #4CAF50;
+            font-weight: bold;
+            z-index: 1000;
+            border: 5px solid #4CAF50;
+            display: none;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px;
+            font-size: 1.1em;
+            color: #856404;
+        }
+
+        .clear-button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .clear-button:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .emoji {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 재미있는 시장놀이</h1>
+            <p>NFC 태그를 휴대폰에 가져다 대보세요!</p>
+        </div>
+        
+        <div class="nfc-status" id="nfcStatus">
+            📱 NFC 준비 중...
+        </div>
+
+        <div class="instructions">
+            <strong>🎯 사용법:</strong><br>
+            1️⃣ 상품 NFC 태그를 휴대폰에 대면 장바구니에 추가돼요<br>
+            2️⃣ 결제 NFC 태그를 휴대폰에 대면 결제가 완료돼요
+        </div>
+        
+        <div class="shopping-cart">
+            <h2 class="cart-title">🛍️ 내 장바구니</h2>
+            <div class="cart-items" id="cartItems">
+                <div class="empty-cart">
+                    <div class="emoji">🛒</div>
+                    장바구니가 비어있어요<br>
+                    상품을 담아보세요!
+                </div>
+            </div>
+            <button class="clear-button" onclick="clearCart()">🗑️ 장바구니 비우기</button>
+        </div>
+    </div>
+
+    <div class="payment-message" id="paymentMessage">
+        🎉 결제되었습니다! 🎉<br>
+        <div style="font-size: 0.6em; margin-top: 15px;">
+            즐거운 쇼핑이었어요! 😊
+        </div>
+    </div>
+
+    <script>
+        let cartItems = [];
+
+        // 효과음 생성 함수
+        function playBeepSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        function playChimeSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // 첫 번째 음
+            const osc1 = audioContext.createOscillator();
+            const gain1 = audioContext.createGain();
+            osc1.connect(gain1);
+            gain1.connect(audioContext.destination);
+            osc1.frequency.setValueAtTime(523, audioContext.currentTime); // C5
+            osc1.type = 'sine';
+            gain1.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            osc1.start(audioContext.currentTime);
+            osc1.stop(audioContext.currentTime + 0.5);
+            
+            // 두 번째 음
+            const osc2 = audioContext.createOscillator();
+            const gain2 = audioContext.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioContext.destination);
+            osc2.frequency.setValueAtTime(659, audioContext.currentTime + 0.2); // E5
+            osc2.type = 'sine';
+            gain2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.2);
+            gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7);
+            osc2.start(audioContext.currentTime + 0.2);
+            osc2.stop(audioContext.currentTime + 0.7);
+        }
+
+        // 장바구니 업데이트 함수
+        function updateCartDisplay() {
+            const cartContainer = document.getElementById('cartItems');
+            
+            if (cartItems.length === 0) {
+                cartContainer.innerHTML = `
+                    <div class="empty-cart">
+                        <div class="emoji">🛒</div>
+                        장바구니가 비어있어요<br>
+                        상품을 담아보세요!
+                    </div>
+                `;
+            } else {
+                cartContainer.innerHTML = cartItems.map((item, index) => `
+                    <div class="cart-item">
+                        <span class="emoji">🛍️</span>
+                        ${item}
+                    </div>
+                `).join('');
+            }
+        }
+
+        // 장바구니 비우기
+        function clearCart() {
+            cartItems = [];
+            updateCartDisplay();
+        }
+
+        // 결제 완료 메시지 표시
+        function showPaymentMessage() {
+            const messageDiv = document.getElementById('paymentMessage');
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+                clearCart(); // 결제 후 장바구니 비우기
+            }, 3000);
+        }
+
+        // NFC 초기화
+        async function initNFC() {
+            const statusDiv = document.getElementById('nfcStatus');
+            
+            if ('NDEFReader' in window) {
+                try {
+                    const ndef = new NDEFReader();
+                    await ndef.scan();
+                    
+                    statusDiv.textContent = '✅ NFC 준비완료! 태그를 대보세요';
+                    statusDiv.className = 'nfc-status';
+                    
+                    ndef.addEventListener('reading', ({ message }) => {
+                        for (const record of message.records) {
+                            if (record.recordType === 'text') {
+                                const textDecoder = new TextDecoder(record.encoding);
+                                const text = textDecoder.decode(record.data);
+                                handleNFCData(text);
+                            }
+                        }
+                    });
+                    
+                } catch (error) {
+                    console.log('NFC 스캔 오류:', error);
+                    statusDiv.textContent = '❌ NFC를 사용할 수 없습니다';
+                    statusDiv.className = 'nfc-status error';
+                }
+            } else {
+                statusDiv.textContent = '❌ 이 브라우저는 NFC를 지원하지 않습니다';
+                statusDiv.className = 'nfc-status error';
+            }
+        }
+
+        // NFC 데이터 처리
+        function handleNFCData(data) {
+            console.log('NFC 데이터:', data);
+            
+            if (data === '결제') {
+                playChimeSound();
+                showPaymentMessage();
+            } else if (data.startsWith('상품:')) {
+                const productInfo = data.replace('상품:', '');
+                playBeepSound();
+                cartItems.push(productInfo);
+                updateCartDisplay();
+            }
+        }
+
+        // 페이지 로드 시 NFC 초기화
+        window.addEventListener('load', () => {
+            initNFC();
+        });
+
+        // 테스트용 버튼들 (개발 중에만 사용)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '1') {
+                handleNFCData('상품:사과 1000원');
+            } else if (e.key === '2') {
+                handleNFCData('상품:바나나 800원');
+            } else if (e.key === '3') {
+                handleNFCData('결제');
+            }
+        });
+    </script>
+</body>
+</html>
